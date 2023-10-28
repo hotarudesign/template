@@ -1,16 +1,17 @@
-const gulp = require("gulp");
-const del = require("del");
-const browserSync = require("browser-sync");
-const notify = require("gulp-notify");
-const plumber = require("gulp-plumber");
-const sass = require("gulp-sass");
+var gulp = require("gulp");
+var del = require("del");
+var browserSync = require("browser-sync");
+var notify = require("gulp-notify");
+var plumber = require("gulp-plumber");
+var pug = require("gulp-pug");
+var sass = require("gulp-sass");
 sass.compiler = require("sass");
-const autoprefixer = require("gulp-autoprefixer");
-const imagemin = require("gulp-imagemin");
-const pngquant = require("imagemin-pngquant");
-const mozjpeg = require("imagemin-mozjpeg");
-const htmlbeautify = require("gulp-html-beautify");
-const php = require("gulp-connect-php");
+var autoprefixer = require("gulp-autoprefixer");
+var imagemin = require("gulp-imagemin");
+var pngquant = require("imagemin-pngquant");
+var mozjpeg = require("imagemin-mozjpeg");
+var htmlbeautify = require("gulp-html-beautify");
+var php = require("gulp-connect-php");
 
 // distフォルダを削除するタスク
 gulp.task("clean", function () {
@@ -36,6 +37,26 @@ gulp.task("browser", function (done) {
     browserSync.reload();
     done();
   });
+});
+
+// Pugのコンパイルタスク
+gulp.task("pug", function () {
+  return gulp
+    .src("src/**/*.pug", "!src/**/_*.pug")
+    .pipe(
+      plumber({ errorHandler: notify.onError("Error: <%= error.message %>") })
+    )
+    .pipe(
+      pug({
+        pretty: true,
+      })
+    )
+    .pipe(
+      htmlbeautify({
+        indent_size: 4,
+      })
+    )
+    .pipe(gulp.dest("./src"));
 });
 
 // Sassのコンパイルタスク
@@ -81,20 +102,24 @@ gulp.task("copy", function () {
 
 // 削除タスク
 gulp.task("clean-dist", function (done) {
-  del(["dist/**/*.scss", "dist/**/*.css.map"]);
+  del(["dist/**/*.pug", "dist/**/*.scss", "dist/**/*.css.map"]);
   done();
 });
 
 // watchタスク
 gulp.task("watch", function () {
   gulp.watch("src/**/*.scss", gulp.task("sass"));
+  gulp.watch("src/**/*.pug", gulp.task("pug"));
 });
 
 // 納品フォルダ作成タスク
 gulp.task(
   "ftp",
-  gulp.series("clean", "sass", "copy", "imagemin", "clean-dist")
+  gulp.series("clean", "pug", "sass", "copy", "imagemin", "clean-dist")
 );
 
 // デフォルトタスク
-gulp.task("default", gulp.series(gulp.parallel("browser", "sass", "watch")));
+gulp.task(
+  "default",
+  gulp.series(gulp.parallel("browser", "pug", "sass", "watch"))
+);
